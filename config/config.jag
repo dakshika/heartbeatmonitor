@@ -1,6 +1,6 @@
 <%
-//var endpoint_url ='http://10.225.231.72:9773/services/WSO2CloudMonitorDataService';
-var endpoint_url ='http://10.0.31.141:9793/services/WSO2CloudMonitorDataService';
+
+var endpoint_url ='DSS endpoint URL';
 
 //graph update interval
 var updateInterval =60000;
