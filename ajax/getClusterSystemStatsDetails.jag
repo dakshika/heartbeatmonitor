@@ -1,0 +1,104 @@
+<%
+var log = new Log("appmonitor.index.ajaxcall");
+var error=[];
+var caramel = require('caramel');
+var panelData,panelDataEth, panelDataObject, cores, memory;
+
+var timestamp = request.getParameter('timestamp'),
+	cluster_name = request.getParameter('cluster_name');
+
+include("../config/config.jag");
+
+try{
+	var	data='',
+		header={"Accept":"application/json", },
+		panelData = get(endpoint_url+'/clusters/'+cluster_name+'/systemstats/'+timestamp, data, header); 
+}catch(e){
+	log.warn('EndpointError' + e);
+	error = {'EndpointError': e};
+}
+
+
+var cpu_data=[], 
+	mem_data=[];
+
+var panelDataParse= parse(panelData.data);
+
+
+for ( var key in panelDataParse) {
+    if(key.toString() != 'Fault') {
+        for (var key2 in panelDataParse[key]) {
+            for (var key3 in panelDataParse[key][key2]) {
+                var reported_time = panelDataParse[key][key2][key3]["reported-time"];
+                var avg_load = panelDataParse[key][key2][key3]["avg-load"];
+                var cpu_temp = [ reported_time.toString() * 1000, avg_load.toString() ];
+                var memory_usage = panelDataParse[key][key2][key3]["memory-usage"];
+                var mem_temp = [reported_time.toString() * 1000, memory_usage.toString()];
+                cpu_data.push(cpu_temp);
+                mem_data.push(mem_temp);
+            }
+        }
+    }
+ };
+
+var network_data_ilo=[], network_data_olo=[], network_data_ieth0=[],network_data_oeth0=[];
+        
+ try{
+    var data='',
+        header={"Accept":"application/json", },
+        panelDataEth = get(endpoint_url+'/clusters/'+cluster_name+'/netstats/'+timestamp, data, header); 
+}catch(e){
+    log.warn('EndpointError' + e);
+    error = {'EndpointError': e};
+}
+
+//getting cores and memory
+try{
+    var data='',
+            header={"Accept":"application/json", },
+            testData = get(endpoint_url+'/clusters/'+cluster_name+'/systemspecs', data, header);
+    system_specs = JSON.parse(testData.data);
+    memory = system_specs["cluster"]["total-memory"];
+    cores = system_specs["cluster"]["cores"];
+}catch(e){
+
+}
+
+var panelDataEthParse= parse(panelDataEth.data);
+
+for ( var key in panelDataEthParse) {
+    if(key.toString() != 'Fault') {
+        for (var key2 in panelDataEthParse[key]) {
+            for (var key3 in panelDataEthParse[key][key2]) {
+                var reported_time = panelDataEthParse[key][key2][key3]["reported-time"];
+                var incoming_lo = panelDataEthParse[key][key2][key3]["incoming-lo"];
+                var outgoing_lo = panelDataEthParse[key][key2][key3]["outgoing-lo"];
+                var incoming_eth0 = panelDataEthParse[key][key2][key3]["incoming-eth0"];
+                var outgoing_eth0 = panelDataEthParse[key][key2][key3]["outgoing-eth0"];
+
+                var incoming_lo_temp = [ reported_time.toString() * 1000, incoming_lo.toString() ];
+                var outgoing_lo_temp = [ reported_time.toString() * 1000, outgoing_lo.toString() ];
+                var incoming_eth0_temp = [ reported_time.toString() * 1000, incoming_eth0.toString() ];
+                var outgoing_eth0_temp = [ reported_time.toString() * 1000, outgoing_eth0.toString() ];
+                    network_data_ilo.push(incoming_lo_temp);
+                    network_data_olo.push(outgoing_lo_temp);
+                    network_data_ieth0.push(incoming_eth0_temp);
+                    network_data_oeth0.push(outgoing_eth0_temp);
+            }
+        }
+    }
+};
+
+if(error.length==0){
+    print({ "cpu_data":cpu_data,
+              "memory_data": mem_data ,
+              "network_data_ilo": network_data_ilo,
+              "network_data_olo": network_data_olo,
+              "network_data_ieth0": network_data_ieth0,
+              "network_data_oeth0": network_data_oeth0,
+              "cores": cores,
+              "memory": memory.toFixed(2),
+              "errorMessage": ''});
+}else{
+    print(error);
+}

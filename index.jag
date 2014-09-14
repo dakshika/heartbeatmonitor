@@ -1,0 +1,26 @@
+<%
+var log = new Log("appmonitor.index");
+var error=[];
+var caramel = require('caramel');
+var panelData, panelDataParse;
+
+include("config/config.jag");
+
+try{
+	var	data='',
+		header={"Accept":"application/json", },
+		panelData = get(endpoint_url+'/clusters', data, header); 
+		panelDataParse = JSON.parse(panelData.data);
+}catch(e){
+	log.warn('EndpointError' + e);
+	error.push({"Error": e.toString()});
+
+}
+
+
+caramel.render({
+    panels: panelDataParse,
+    updateInterval:updateInterval,
+    error: error
+});
+%>

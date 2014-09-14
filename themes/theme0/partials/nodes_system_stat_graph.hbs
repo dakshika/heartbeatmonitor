@@ -1,0 +1,132 @@
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 ui-sortable" data-rel="sortable">
+            {{#each data.cluster.node}}
+                <!-- panel graph -->
+                <div class="panel widget col-md-4">
+                    <div class="panel-heading cm_bg-nevy">
+                        <h3 class="panel-title">
+                            <span class="menu-icon"> <i class="fa fa-bar-chart-o"></i> </span> {{name}}
+                        </h3>
+                        <div class="cm_panel-menu">
+                            <div data-action="expand">
+                                <i class="fa fa-expand"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="graph_loading_{{name}}"></div>
+                        <div id="flotcontainer_{{name}}" class="flotcon"></div>
+                        <div id="flotcontainer2_{{name}}" class="flotcon"></div>
+                    </div>
+                </div>
+            {{/each}}
+
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+
+        {{#each data.cluster.node}}
+            var cpu_data_{{replaceDash name}} = [];
+            var memory_data_{{replaceDash name}} = [];
+            var time_stamp_{{replaceDash name}} = 0;
+        {{/each}}
+
+        var data = [];
+        var updateInterval = {{updateInterval}};
+        var now = new Date().getTime();
+        var dataset;
+
+
+        function update() {
+
+            {{#each data.cluster.node}}
+                $('.graph_loading_{{name}}').html('<img src="{{url "/themes/theme0/ui/img/loading.gif"}}" />');
+                $.ajax({
+                           url:      'ajax/getNodeSystemStats.jag?timestamp='+time_stamp_{{replaceDash name}}+'&node_name={{name}}',
+                           method:   'GET',
+                           dataType: 'json',
+                           success:  function(series) {
+                               $('.graph_loading_{{name}}').html('');
+                               if(series.cpu_data.length > 0) {
+
+                                   time_stamp_{{replaceDash name}} = (series.cpu_data[series.cpu_data.length-1][0]) / 1000;
+                                   cpu_data_{{replaceDash name}} = cpu_data_{{replaceDash name}}.slice(series.cpu_data.length,
+                                                                                                       cpu_data_{{replaceDash name}}.length).concat(series.cpu_data);
+                                   memory_data_{{replaceDash name}} = memory_data_{{replaceDash name}}.slice(series.memory_data.length,
+                                                                                                             memory_data_{{replaceDash name}}.length).concat(series.memory_data);
+                               }
+
+                               var num_of_cores = (series.cores);
+                               var total_memory = (series.memory);
+
+                               dataset_cpu = [
+                                   { label: "Cores - " + num_of_cores, data: cpu_data_{{replaceDash name}} ,color: "rgb(200, 20, 30)",
+                                       threshold: {
+                                           below: num_of_cores,
+                                           color: "rgb(65, 131, 215)"
+                                       }}
+                               ];
+
+                               dataset_mem = [
+                                   { label: "Total - " +total_memory + " GB", data: memory_data_{{replaceDash name}} ,color: "rgb(200, 20, 30)",
+                                       threshold: {
+                                           below: total_memory * 0.9,
+                                           color: "rgb(46, 204, 113)"
+                                       }}
+                               ];
+                               $.plot($("#flotcontainer_{{name}}"), dataset_cpu, {
+                                          xaxis: {
+                                              mode: "time",minTickSize: [1, "minute"],
+                                              timeformat: "%H:%M",
+                                              axisLabel: "Time " + new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1],
+                                              axisLabelUseCanvas: true,
+                                              axisLabelFontSizePixels: 10,
+                                              axisLabelFontFamily: 'Open Sans, sans-serif',
+                                              axisLabelPadding: 10
+                                          },
+                                          yaxis: {
+                                              axisLabel: "Load Avg",
+                                              axisLabelUseCanvas: true,
+                                              axisLabelFontSizePixels: 10,
+                                              axisLabelFontFamily: 'Open Sans, sans-serif',
+                                              axisLabelPadding: 10
+                                          }
+                                      }
+                               );
+                               $.plot($("#flotcontainer2_{{name}}"), dataset_mem , {
+                                   xaxis: {
+                                       mode: "time",minTickSize: [1, "minute"],
+                                       timeformat: "%H:%M",
+                                       axisLabel: "Time " + new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1],
+                                       axisLabelUseCanvas: true,
+                                       axisLabelFontSizePixels: 10,
+                                       axisLabelFontFamily: 'Open Sans, sans-serif',
+                                       axisLabelPadding: 10
+                                   },
+                                   yaxis: {
+                                       axisLabel: "Memory Usage",
+                                       axisLabelUseCanvas: true,
+                                       axisLabelFontSizePixels: 10,
+                                       axisLabelFontFamily: 'Open Sans, sans-serif',
+                                       axisLabelPadding: 10
+                                   }
+                               });
+            
+                           }
+                       });
+            {{/each}}
+            setTimeout(update, updateInterval);
+        }
+
+        update();
+    });
+
+
+
+
+</script>

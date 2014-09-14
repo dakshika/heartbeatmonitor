@@ -1,0 +1,57 @@
+<%
+var log = new Log("appmonitor.clusters");
+var error=[];
+var caramel = require('caramel');
+var testCountTotal=0, testCountPassed = 0,testCountFailed=0, testCountPassedRatio=0, testavailability=false;
+
+var cluster_name = request.getParameter('cluster_name');
+
+include("config/config.jag");
+
+try{
+    var	data='',
+            header={"Accept":"application/json", },
+            testData = get(endpoint_url+'/heartbeat/'+cluster_name, data, header);
+    parseTestData = JSON.parse(testData.data);
+
+    var fault = 1;
+    for(var objKey in parseTestData){
+        if (objKey.toString() != 'Fault') {
+            fault = 0;
+        }
+    }
+
+    if (fault == 0) {
+        for (var key in parseTestData['heartbeat']['service']) {
+            var unixTime = parseTestData['heartbeat']['service'][key]['reported-time'];
+            var date = new Date(unixTime * 1000);
+            parseTestData['heartbeat']['service'][key]['reported-time'] = date.toDateString() + " " + date.toTimeString();
+            if (parseTestData['heartbeat']['service'][key]['status']) {
+                testCountPassed += 1;
+            }
+            testCountTotal += 1;
+        }
+    }
+    testCountPassedRatio = ((testCountPassed/testCountTotal) * 100).toFixed(0);
+}catch(e){
+    log.warn('EndpointError' + e);
+    error = {'EndpointError': e};
+}
+
+if(testCountTotal==0){
+    testavailability=false;
+}else{
+    testavailability=true;
+}
+
+caramel.render({
+                   cluster_name:cluster_name,
+                   testavailability: testavailability,
+                   tests: parseTestData,
+                   testCountFailed: testCountTotal - testCountPassed,
+                   testCountPassed: testCountPassed,
+                   testCountPassedRatio: testCountPassedRatio,
+                   updateInterval:updateInterval,
+                   error: error
+               });
+%>

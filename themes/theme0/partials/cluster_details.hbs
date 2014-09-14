@@ -1,0 +1,305 @@
+<div class="container" xmlns="http://www.w3.org/1999/html">
+    <div class="row">
+        <div class="col-md-12">
+            <!-- Nav tabs -->
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="active"><a href="#statistics" role="tab" data-toggle="tab">Statistics</a></li>
+                <li><a href="#log-data" role="tab" data-toggle="tab">Logs</a></li>
+            </ul>
+            <!-- Tab panes -->
+            <div class="tab-content">
+                <div class="tab-pane active" id="statistics">
+                    {{#if testavailability}}
+                        <!-- BOF test summary data -->
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="test-title">Service Test Summary</div>
+                                <div class="test-overall">{{testCountPassedRatio}}<span>%</span></div>
+                                <div class="test-summary"></div>
+                                <div class="test-legends">
+                                    <span class="failed-count">Failed: <span>{{testCountFailed}}</span> </span> |
+                                    <span class="passed-count"> Passed: <span>{{testCountPassed}}</span> </span>
+                                </div>
+                            </div>
+                            <div class="col-md-9 ">
+                                <ul class="list-group">
+                                    {{#each testdata.heartbeat.service}}
+                                        <li class="list-group-item {{#if status}}test-success{{else}}test-fail{{/if}}" >
+                                            {{#if status}}
+                                                <i class="fa  fa-2x fa-check-circle-o"></i>
+                                            {{else}}
+                                                <i class="fa  fa-2x fa-exclamation-circle"></i>
+                                            {{/if}}
+                                            {{reported-time}} - {{test}}
+
+                                        </li>
+                                    {{/each}}
+                                </ul>
+                            </div>
+                        </div>
+                        <!-- EOF test summary data -->
+                    {{/if}}
+                    <div class="row">
+                        <!-- panel graph -->
+                        <div class="panel widget col-md-12">
+                            <div class="panel-heading cm_bg-nevy">
+		                
+                                <h3 class="panel-title">
+                                    <a href="nodes.jag?cluster_name={{cluster_name}}&category=nodes_system_stat">
+                                        <span class="menu-icon"> <i class="fa fa-bar-chart-o"></i> </span>  Load Average (One Minute)
+                                                                                                            <!--(Cores - <span id="cpu-text"></span> )-->
+                                    </a>
+                                </h3>
+
+                                <div class="cm_panel-menu">
+                                    <div data-action="expand">
+                                        <i class="fa fa-expand"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="graph_loading_{{name}}"></div>
+                                <div id="flotcontainer_detail_{{name}}" class="flotcon_detail"></div>
+		               
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- panel graph -->
+                        <div class="panel widget col-md-12">
+                            <div class="panel-heading cm_bg-nevy">
+		                
+                                <h3 class="panel-title">
+                                    <a href="nodes.jag?cluster_name={{cluster_name}}&category=nodes_system_stat">
+                                        <span class="menu-icon"> <i class="fa fa-bar-chart-o"></i> </span>Memory Usage (GB) <!--(Total -
+                            <span id="memory-text"></span> )-->
+                                    </a>
+                                </h3>
+
+                                <div class="cm_panel-menu">
+                                    <div data-action="expand">
+                                        <i class="fa fa-expand"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+
+                                <div class="graph_loading_{{name}}"></div>
+                                <div id="flotcontainer_detail_mem_{{name}}" class="flotcon_detail"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- panel graph -->
+                        <div class="panel widget col-md-12">
+                            <div class="panel-heading cm_bg-nevy">
+		                
+                                <h3 class="panel-title">
+                                    <a href="nodes.jag?cluster_name={{cluster_name}}&category=nodes_network_stat">
+                                        <span class="menu-icon"> <i class="fa fa-bar-chart-o"></i> </span>  Network Usage (MB) Interface - eth0
+                                    </a>
+                                </h3>
+
+                                <div class="cm_panel-menu">
+                                    <div data-action="expand">
+                                        <i class="fa fa-expand"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="graph_loading_{{name}}"></div>
+                                <div id="flotcontainer_detail_net_eth0_{{name}}" class="flotcon_detail"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- panel graph -->
+                        <div class="panel widget col-md-12">
+                            <div class="panel-heading cm_bg-nevy">
+
+                                <h3 class="panel-title">
+                                    <a href="nodes.jag?cluster_name={{cluster_name}}&category=nodes_network_stat">
+                                        <span class="menu-icon"> <i class="fa fa-bar-chart-o"></i> </span>  Network Usage (MB) Interface - localhost
+                                    </a>
+                                </h3>
+
+                                <div class="cm_panel-menu">
+                                    <div data-action="expand">
+                                        <i class="fa fa-expand"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="graph_loading_{{name}}"></div>
+                                <div id="flotcontainer_detail_net_lo_{{name}}" class="flotcon_detail"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="tab-pane" id="log-data">...</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+
+
+        {{#if testavailability}}
+            var data = [
+                { data: {{testCountPassed}}, color: "#70e55d"},
+                { data: {{testCountFailed}}, color: "#e37064"}
+            ];
+            $.plot('.test-summary', data, {
+                series: {
+                    pie: {
+                        innerRadius: 0.9,
+                        show: true
+                    }
+                }
+            });
+        {{/if}}
+
+
+        var data = [];
+        var updateInterval = 60000;
+        var now = new Date().getTime();
+        var dataset;
+        var cpu_data=[];
+        var memory_data=[];
+        var network_in_eth0=[];
+        var network_out_eth0=[];
+        var network_in_lo=[];
+        var network_out_lo=[];
+        var time_stamp=0;
+
+        function update() {
+
+            $('.graph_loading_{{name}}').html('<img src="{{url "/themes/theme0/ui/img/loading.gif"}}" />');
+            $.ajax({
+                       url:      'ajax/getClusterSystemStatsDetails.jag?timestamp='+time_stamp+'&cluster_name={{cluster_name}}',
+                       method:   'GET',
+                       dataType: 'json',
+                       success:  function(series) {
+                           $('.graph_loading_{{name}}').html('');
+                           if(series.cpu_data.length > 0) {
+                               time_stamp = series.cpu_data[series.cpu_data.length - 1][0] / 1000;
+                               cpu_data  = cpu_data.slice(series.cpu_data.length, cpu_data.length).concat(series.cpu_data);
+                               memory_data = memory_data.slice(series.memory_data.length, memory_data.length).concat(series.memory_data);
+                               network_in_eth0 = network_in_eth0.slice(series.network_data_ieth0.length, network_in_eth0.length).concat(series.network_data_ieth0);
+                               network_out_eth0 = network_out_eth0.slice(series.network_data_oeth0.length, network_out_eth0.length).concat(series.network_data_oeth0);
+                               network_in_lo = network_in_lo.slice(series.network_data_ilo.length, network_in_lo.length).concat(series.network_data_ilo);
+                               network_out_lo = network_out_lo.slice(series.network_data_olo.length, network_out_lo.length).concat(series.network_data_olo);
+                           }
+                           var num_of_cores = (series.cores);
+                           var total_memory = (series.memory);
+
+
+                           dataset_cpu = [
+                               { label: "Cores - " + num_of_cores, data: cpu_data ,color: "rgb(200, 20, 30)",
+                                   threshold: {
+                                       below: num_of_cores,
+                                       color: "rgb(65, 131, 215)"
+                                   }}
+                           ];
+
+                           dataset_mem = [
+                               { label: "Total - " +total_memory + " GB", data: memory_data ,color: "rgb(200, 20, 30)",
+                                   threshold: {
+                                       below: total_memory * 0.8,
+                                       color: "rgb(46, 204, 113)"
+                                   }}
+                           ];
+                           dataset_network_eth0 = [
+                               { label: "incoming", data: network_in_eth0 ,color: "rgb(65, 131, 215)"},
+                               { label: "outgoing", data: network_out_eth0 , color: "rgb(46, 204, 113)"}
+                           ];
+
+                           dataset_network_lo = [
+                               { label: "incoming", data: network_in_lo ,color: "rgb(65, 131, 215)"},
+                               { label: "outgoing", data: network_out_lo , color: "rgb(46, 204, 113)"}
+                           ];
+            
+                           $.plot($("#flotcontainer_detail_{{name}}"), dataset_cpu, cpu_options);
+                           $.plot($("#flotcontainer_detail_mem_{{name}}"), dataset_mem , mem_options);
+                           $.plot($("#flotcontainer_detail_net_eth0_{{name}}"), dataset_network_eth0, network_options);
+                           $.plot($("#flotcontainer_detail_net_lo_{{name}}"), dataset_network_lo, network_options);
+            
+                       }
+                   });
+            setTimeout(update, updateInterval);
+        }
+
+        update();
+    });
+
+    cpu_options = { xaxis: {
+        mode: "time",minTickSize: [1, "minute"],
+        timeformat: "%H:%M",
+        axisLabel: "Time " + new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1],
+        axisLabelUseCanvas: true,
+        axisLabelFontSizePixels: 12,
+        axisLabelFontFamily: 'Open Sans, sans-serif',
+        axisLabelPadding: 10
+    },
+        yaxis: {
+            axisLabel: "Avg",
+            axisLabelUseCanvas: true,
+            axisLabelFontSizePixels: 12,
+            axisLabelFontFamily: 'Open Sans, sans-serif',
+            axisLabelPadding: 10
+        }
+    };
+
+    mem_options = { xaxis: {
+        mode: "time",minTickSize: [1, "minute"],
+        timeformat: "%H:%M",
+        axisLabel: "Time " + new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1],
+        axisLabelUseCanvas: true,
+        axisLabelFontSizePixels: 12,
+        axisLabelFontFamily: 'Open Sans, sans-serif',
+        axisLabelPadding: 10
+    },
+        yaxis: {
+            axisLabel: "Usage",
+            axisLabelUseCanvas: true,
+            axisLabelFontSizePixels: 12,
+            axisLabelFontFamily: 'Open Sans, sans-serif',
+            axisLabelPadding: 10
+        }
+    };
+
+    network_options = { xaxis: {
+        mode: "time",minTickSize: [1, "minute"],
+        timeformat: "%H:%M",
+        axisLabel: "Time " + new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1],
+        axisLabelUseCanvas: true,
+        axisLabelFontSizePixels: 12,
+        axisLabelFontFamily: 'Open Sans, sans-serif',
+        axisLabelPadding: 10
+    },
+        yaxis: {
+            axisLabel: "Usage",
+            axisLabelUseCanvas: true,
+            axisLabelFontSizePixels: 12,
+            axisLabelFontFamily: 'Open Sans, sans-serif',
+            axisLabelPadding: 10
+        },
+        series: {
+            lines: {
+                show: true
+            },
+            points: {
+                show: false
+            }
+        }
+    };
+
+</script>

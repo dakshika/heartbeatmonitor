@@ -1,0 +1,58 @@
+<%
+var log = new Log("appmonitor.nodes.ajaxcall");
+var error=[];
+var caramel = require('caramel');
+var panelData, panelDataObject;
+
+var timestamp = request.getParameter('timestamp'),
+        node_name = request.getParameter('node_name');
+
+include("../config/config.jag");
+
+try{
+    var	data='',
+            header={"Accept":"application/json", },
+            panelData = get(endpoint_url+'/nodes/'+node_name+'/netstats/'+timestamp, data, header);
+}catch(e){
+    log.warn('EndpointError' + e);
+    error = {'EndpointError': e};
+}
+
+
+var network_data_ilo=[], network_data_olo=[], network_data_ieth0=[],network_data_oeth0=[];
+
+var panelDataParse= parse(panelData.data);
+
+
+for ( var key in panelDataParse) {
+    if(key.toString() != 'Fault') {
+        for ( var key2 in panelDataParse[key]) {
+            for ( var key3 in panelDataParse[key][key2]) {
+
+                var reported_time = panelDataParse[key][key2][key3]["reported-time"];
+                var incoming_lo = panelDataParse[key][key2][key3]["incoming-lo"];
+                var outgoing_lo = panelDataParse[key][key2][key3]["outgoing-lo"];
+                var incoming_eth0 = panelDataParse[key][key2][key3]["incoming-eth0"];
+                var outgoing_eth0 = panelDataParse[key][key2][key3]["outgoing-eth0"];
+
+                var incoming_lo_temp = [ reported_time.toString() * 1000, incoming_lo.toString() ];
+                var outgoing_lo_temp = [ reported_time.toString() * 1000, outgoing_lo.toString() ];
+                var incoming_eth0_temp = [ reported_time.toString() * 1000, incoming_eth0.toString() ];
+                var outgoing_eth0_temp = [ reported_time.toString() * 1000, outgoing_eth0.toString() ];
+                network_data_ilo.push(incoming_lo_temp);
+                network_data_olo.push(outgoing_lo_temp);
+                network_data_ieth0.push(incoming_eth0_temp);
+                network_data_oeth0.push(outgoing_eth0_temp);
+            }
+        }
+    }
+};
+
+if(error.length==0){
+    print({  "network_data_ilo": network_data_ilo,
+              "network_data_olo": network_data_olo,
+              "network_data_ieth0": network_data_ieth0,
+              "network_data_oeth0": network_data_oeth0, "errorMessage": ''});
+}else{
+    print(error);
+i}

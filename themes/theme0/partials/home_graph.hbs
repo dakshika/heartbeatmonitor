@@ -1,0 +1,144 @@
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 ui-sortable" data-rel="sortable">
+            {{#each data.clusters.cluster}}
+                <!-- panel graph -->
+                <div class="panel widget col-md-4">
+                    <div class="panel-heading cm_bg-nevy">
+                        <a href="cluster.jag?cluster_name={{name}}">
+                            <h3 class="panel-title">
+                                <span class="menu-icon"> <i class="fa fa-bar-chart-o"></i> </span> {{name}}
+                            </h3>
+                        </a>
+                        <div class="cm_panel-menu">
+                            <div data-action="expand">
+                                <i class="fa fa-expand"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-body" id="body_{{name}}">
+                        <div class="graph_loading_{{name}}"></div>
+                        <div id="flotcontainer_{{name}}" class="flotcon"></div>
+                        <div id="flotcontainer2_{{name}}" class="flotcon"></div>
+                    </div>
+                </div>
+            {{/each}}
+
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+
+        {{#each data.clusters.cluster}}
+            var cpu_data_{{replaceDash name}}=[];
+            var memory_data_{{replaceDash name}}=[];
+            var time_stamp_{{replaceDash name}} = 0;
+        {{/each}}
+
+        var data = [];
+        var updateInterval = {{updateInterval}};
+        var now = new Date().getTime();
+        var dataset;
+        var hb_test_failed= 0;
+        var cpu_threshold= 1.0;
+        var total_memory = 0;
+
+        function update() {
+
+            {{#each data.clusters.cluster}}
+                $('.graph_loading_{{name}}').html('<img src="{{url "/themes/theme0/ui/img/loading.gif"}}" />');
+                $.ajax({
+                           url:      'ajax/getClusterSystemStats.jag?timestamp='+time_stamp_{{replaceDash name}}+'&cluster_name={{name}}',
+                           method:   'GET',
+                           dataType: 'json',
+                           success:  function(series) {
+                               $('.graph_loading_{{name}}').html('');
+
+                               if(series.cpu_data.length > 0) {
+                                   time_stamp_{{replaceDash name}} = (series.cpu_data[series.cpu_data.length-1][0]) / 1000;
+                                   cpu_data_{{replaceDash name}} = cpu_data_{{replaceDash name}}.slice(series.cpu_data.length,
+                                                                                                       cpu_data_{{replaceDash name}}.length).concat(series.cpu_data);
+                                   memory_data_{{replaceDash name}} = memory_data_{{replaceDash name}}.slice(series.memory_data.length,
+                                                                                                             memory_data_{{replaceDash name}}.length).concat(series.memory_data);
+                               }
+
+                               hb_test_failed = series.failedTest;
+                               cpu_threshold = series.cores;
+                               total_memory = series.memory;
+
+                               //color on HB fail
+                               if(hb_test_failed > 0){
+                                   $('#body_{{name}}').css("background-color", "#F0CDCD");
+                               }else{
+                                   $('#body_{{name}}').css("background-color", "#FFF");
+                               }
+
+                               dataset_cpu = [
+                                   { label: "Cores - " + cpu_threshold, data: cpu_data_{{replaceDash name}} , color: "rgb(200, 20, 30)",
+                                       threshold: {
+                                           below: cpu_threshold,
+                                           color: "rgb(65, 131, 215)"
+                                       }}
+                               ];
+
+                               dataset_mem = [
+                                   { label: "Total - "+ total_memory + " GB", data: memory_data_{{replaceDash name}} , color: "rgb(200, 20, 30)",
+                                       threshold: {
+                                           below: total_memory * 0.9,
+                                           color: "rgb(46, 204, 113)"
+                                       }}
+                               ];
+                               $.plot($("#flotcontainer_{{name}}"), dataset_cpu, {
+                                          xaxis: {
+                                              mode: "time",
+                                              minTickSize: [1, "minute"],
+                                              axisLabel: "Time " + new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1],
+                                              timeformat: "%H:%M",
+                                              axisLabelUseCanvas: true,
+                                              axisLabelFontSizePixels: 10,
+                                              axisLabelFontFamily: 'Open Sans, sans-serif',
+                                              axisLabelPadding: 10
+                                          },
+                                          yaxis: {
+                                              axisLabel: "Load Avg",
+                                              axisLabelUseCanvas: true,
+                                              axisLabelFontSizePixels: 10,
+                                              axisLabelFontFamily: 'Open Sans, sans-serif',
+                                              axisLabelPadding: 10
+                                          }
+                                      }
+                               );
+                               $.plot($("#flotcontainer2_{{name}}"), dataset_mem , {
+                                   xaxis: {
+                                       mode: "time",minTickSize: [1, "minute"],
+                                       axisLabel: "Time " + new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1],
+                                       timeformat: "%H:%M",
+                                       axisLabelUseCanvas: true,
+                                       axisLabelFontSizePixels: 10,
+                                       axisLabelFontFamily: 'Open Sans, sans-serif',
+                                       axisLabelPadding: 10
+                                   },
+                                   yaxis: {
+                                       axisLabel: "Memory Usage",
+                                       axisLabelUseCanvas: true,
+                                       axisLabelFontSizePixels: 10,
+                                       axisLabelFontFamily: 'Open Sans, sans-serif',
+                                       axisLabelPadding: 10
+                                   }
+                               });
+                           }
+                       });
+            {{/each}}
+            setTimeout(update, updateInterval);
+        }
+
+        update();
+    });
+
+
+
+
+</script>

@@ -1,0 +1,30 @@
+<%
+var log = new Log("appmonitor.nodes");
+var error=[];
+var caramel = require('caramel');
+var panelData, panelDataParse;
+var cluster_name = request.getParameter('cluster_name');
+var category = request.getParameter('category');
+
+include("config/config.jag");
+
+
+try{
+    var	data='',
+            header={"Accept":"application/json", },
+            panelData = get(endpoint_url+'/clusters/'+cluster_name+'/nodes', data, header);
+    panelDataParse = JSON.parse(panelData.data);
+}catch(e){
+    log.warn('EndpointError' + e);
+    error.push({"Error": e.toString()});
+
+}
+
+caramel.render({
+                   panels: panelDataParse,
+                   cluster_name:cluster_name,
+                   category: category,
+                   updateInterval:updateInterval,
+                   error: error
+               });
+%>

@@ -1,0 +1,61 @@
+<%
+var log = new Log("appmonitor.nodes.ajaxcall");
+var error=[];
+var caramel = require('caramel');
+var panelData, panelDataObject, cores, memory;
+
+var timestamp = request.getParameter('timestamp'),
+        node_name = request.getParameter('node_name');
+
+include("../config/config.jag");
+
+try{
+    var	data='',
+            header={"Accept":"application/json", },
+            panelData = get(endpoint_url+'/nodes/'+node_name+'/systemstats/'+timestamp, data, header);
+}catch(e){
+    log.warn('EndpointError' + e);
+    error = {'EndpointError': e};
+}
+
+
+var cpu_data=[], 
+        mem_data=[];
+
+var panelDataParse= parse(panelData.data);
+
+
+for ( var key in panelDataParse) {
+    if(key.toString() != 'Fault') {
+        for ( var key2 in panelDataParse[key]) {
+            for ( var key3 in panelDataParse[key][key2]) {
+
+                var reported_time = panelDataParse[key][key2][key3]["reported-time"];
+                var avg_load = panelDataParse[key][key2][key3]["avg-load"];
+                var cpu_temp = [ reported_time.toString() * 1000, avg_load.toString() ];
+                var memory_usage = panelDataParse[key][key2][key3]["memory-usage"];
+                var mem_temp = [reported_time.toString() * 1000 , memory_usage.toString()];
+                cpu_data.push(cpu_temp);
+                mem_data.push(mem_temp);
+            }
+        }
+    }
+};
+
+//getting cores and memory
+try{
+    var data='',
+            header={"Accept":"application/json", },
+            testData = get(endpoint_url+'/nodes/'+node_name+'/systemspecs', data, header);
+    system_specs = JSON.parse(testData.data);
+    memory = system_specs["node"]["total-memory"];
+    cores = system_specs["node"]["cores"];
+}catch(e){
+
+}
+        
+if(error.length==0){
+    print({"cpu_data":cpu_data, "memory_data": mem_data , "cores":cores, "memory":memory.toFixed(2), "errorMessage": ''});
+}else{
+    print(error);
+}

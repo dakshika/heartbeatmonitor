@@ -1,0 +1,123 @@
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 ui-sortable" data-rel="sortable">
+            {{#each data.cluster.node}}
+                <!-- panel graph -->
+                <div class="panel widget col-md-4">
+                    <div class="panel-heading cm_bg-nevy">
+                        <h3 class="panel-title">
+                            <span class="menu-icon"> <i class="fa fa-bar-chart-o"></i> </span> {{name}}
+                        </h3>
+                        <div class="cm_panel-menu">
+                            <div data-action="expand">
+                                <i class="fa fa-expand"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="graph_loading_{{name}}"></div>
+                        <div id="flotcontainer_{{name}}" class="flotcon"></div>
+                        <div id="flotcontainer2_{{name}}" class="flotcon"></div>
+                    </div>
+                </div>
+            {{/each}}
+
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+
+        {{#each data.cluster.node}}
+            var network_out_eth0_{{replaceDash name}} = [];
+            var network_in_eth0_{{replaceDash name}} = [];
+            var network_in_lo_{{replaceDash name}} = [];
+            var network_out_lo_{{replaceDash name}} = [];
+            var time_stamp_{{replaceDash name}} = 0;
+        {{/each}}
+
+        var data = [];
+        var updateInterval = {{updateInterval}};
+        var now = new Date().getTime();
+        var dataset;
+
+
+        function update() {
+
+            {{#each data.cluster.node}}
+                $('.graph_loading_{{name}}').html('<img src="{{url "/themes/theme0/ui/img/loading.gif"}}" />');
+                $.ajax({
+                           url:      'ajax/getNodeNetworkStats.jag?timestamp='+time_stamp_{{replaceDash name}}+'&node_name={{name}}',
+                           method:   'GET',
+                           dataType: 'json',
+                           success:  function(series) {
+                               $('.graph_loading_{{name}}').html('');
+                               if(series.network_data_ieth0.length > 0) {
+
+                                   time_stamp_{{replaceDash name}} = (series.network_data_ieth0[series.network_data_ieth0.length-1][0]) / 1000;
+                                   network_in_eth0_{{replaceDash name}} = network_in_eth0_{{replaceDash name}}.slice(series.network_data_ieth0.length, network_in_eth0_{{replaceDash name}}.length).concat(series.network_data_ieth0);
+                                   network_out_eth0_{{replaceDash name}} = network_out_eth0_{{replaceDash name}}.slice(series.network_data_oeth0.length, network_out_eth0_{{replaceDash name}}.length).concat(series.network_data_oeth0);
+                                   network_in_lo_{{replaceDash name}} = network_in_lo_{{replaceDash name}}.slice(series.network_data_ilo.length, network_in_lo_{{replaceDash name}}.length).concat(series.network_data_ilo);
+                                   network_out_lo_{{replaceDash name}} = network_out_lo_{{replaceDash name}}.slice(series.network_data_olo.length, network_out_lo_{{replaceDash name}}.length).concat(series.network_data_olo);
+                               }
+
+
+                               dataset_network_eth0 = [
+                                   { label: "incoming", data: network_in_eth0_{{replaceDash name}} ,color: "rgb(65, 131, 215)"},
+                                   { label: "outgoing", data: network_out_eth0_{{replaceDash name}} , color: "rgb(46, 204, 113)"}
+                               ];
+
+                               dataset_network_lo = [
+                                   { label: "incoming", data: network_in_lo_{{replaceDash name}} ,color: "rgb(65, 131, 215)"},
+                                   { label: "outgoing", data: network_out_lo_{{replaceDash name}} , color: "rgb(46, 204, 113)"}
+                               ];
+
+                               $.plot($("#flotcontainer_{{name}}"), dataset_network_eth0, {
+                                          xaxis: {
+                                              mode: "time",minTickSize: [1, "minute"],
+                                              timeformat: "%H:%M",
+                                              axisLabel: "Time " + new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1],
+                                              axisLabelUseCanvas: true,
+                                              axisLabelFontSizePixels: 10,
+                                              axisLabelFontFamily: 'Open Sans, sans-serif',
+                                              axisLabelPadding: 10
+                                          },
+                                          yaxis: {
+                                              axisLabel: "eth0 (MB)",
+                                              axisLabelUseCanvas: true,
+                                              axisLabelFontSizePixels: 10,
+                                              axisLabelFontFamily: 'Open Sans, sans-serif',
+                                              axisLabelPadding: 10
+                                          }
+                                      }
+                               );
+                               $.plot($("#flotcontainer2_{{name}}"), dataset_network_lo , {
+                                   xaxis: {
+                                       mode: "time",minTickSize: [1, "minute"],
+                                       timeformat: "%H:%M",
+                                       axisLabel: "Time " + new Date().toString().match(/([A-Z]+[\+-][0-9]+.*)/)[1],
+                                       axisLabelUseCanvas: true,
+                                       axisLabelFontSizePixels: 10,
+                                       axisLabelFontFamily: 'Open Sans, sans-serif',
+                                       axisLabelPadding: 10
+                                   },
+                                   yaxis: {
+                                       axisLabel: "localhost (MB)",
+                                       axisLabelUseCanvas: true,
+                                       axisLabelFontSizePixels: 10,
+                                       axisLabelFontFamily: 'Open Sans, sans-serif',
+                                       axisLabelPadding: 10
+                                   }
+                               });
+
+                           }
+                       });
+            {{/each}}
+            setTimeout(update, updateInterval);
+        }
+
+        update();
+    });
+</script>

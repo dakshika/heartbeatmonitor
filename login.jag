@@ -1,0 +1,10 @@
+<%
+var log = new Log("appmonitor.login");
+var error=[];
+var caramel = require('caramel');
+
+
+caramel.render({
+    error:''
+});
+%>
